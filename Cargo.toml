@@ -1,0 +1,11 @@
+[package]
+name = "melt-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jan Tore Bøe <jan@boee.org>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/jantb/melt-rs.git"
+
+[dependencies]
+ascii_utils = "0.9.3"
