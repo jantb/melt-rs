@@ -13,7 +13,7 @@ impl SearchIndex {
         }
     }
 
-    fn add_message(&mut self, message: &Message) {
+    pub fn add_message(&mut self, message: &Message) {
         let trigrams = message.get_trigram();
         let (m, k) = estimate_parameters(trigrams.len() as u64, 0.001);
 
@@ -27,9 +27,9 @@ impl SearchIndex {
         };
     }
 
-    fn search(&self, query: &str) -> Vec<Message> {
-        let messages: Vec<Message> = self.shards.iter().map(|s| s.search(query)).flatten().filter(|s|{
-            query.split(" ").all(|q|s.value.contains(q))
+    pub fn search(&self, query: &str) -> Vec<Message> {
+        let messages: Vec<Message> = self.shards.iter().map(|s| s.search(query)).flatten().filter(|s| {
+            query.split(" ").all(|q| s.value.contains(q))
         }).collect();
         return messages;
     }
@@ -38,8 +38,8 @@ impl SearchIndex {
 #[test]
 fn test_search() {
     let mut index = SearchIndex { shards: vec![] };
-    index.add_message(&Message{ json: false, value: "notth" });
-    index.add_message(&Message{ json: false, value: "hello" });
+    index.add_message(&Message { json: false, value: "notth" });
+    index.add_message(&Message { json: false, value: "hello" });
 
     let result = index.search("llo");
     assert_eq!("hello", result.last().unwrap().value);

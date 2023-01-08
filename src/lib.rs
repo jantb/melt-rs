@@ -15,6 +15,6 @@ mod message;
 mod shard;
 mod trigrams;
 
-pub fn get_index() -> index::SearchIndex {
+pub fn get_search_index() -> index::SearchIndex {
     index::SearchIndex::new()
 }
