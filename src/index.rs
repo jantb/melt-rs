@@ -2,11 +2,11 @@ use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
 
-pub struct Index {
+pub struct SearchIndex {
     shards: Vec<Shard>,
 }
 
-impl Index {
+impl SearchIndex {
     pub fn new() -> Self {
         Self {
             shards: vec![],
@@ -37,7 +37,7 @@ impl Index {
 
 #[test]
 fn test_search() {
-    let mut index = Index { shards: vec![] };
+    let mut index = SearchIndex { shards: vec![] };
     index.add_message(&Message{ json: false, value: "notth" });
     index.add_message(&Message{ json: false, value: "hello" });
 
