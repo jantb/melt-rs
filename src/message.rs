@@ -6,7 +6,6 @@ pub struct Message {
     pub value: &'static str,
 }
 
-
 impl Message {
     pub fn get_trigram(&self) -> Vec<String> {
         return trigram(&self.value)

@@ -11,7 +11,7 @@ unused_extern_crates
 mod bloom;
 mod bucket;
 pub mod index;
-mod message;
+pub mod message;
 mod shard;
 mod trigrams;
 
