@@ -38,8 +38,8 @@ impl SearchIndex {
 #[test]
 fn test_search() {
     let mut index = SearchIndex { shards: vec![] };
-    index.add_message(&Message { json: false, value: "notth" });
-    index.add_message(&Message { json: false, value: "hello" });
+    index.add_message(&Message { json: false, value: "notth".to_string() });
+    index.add_message(&Message { json: false, value: "hello".to_string() });
 
     let result = index.search("llo");
     assert_eq!("hello", result.last().unwrap().value);

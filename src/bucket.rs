@@ -70,7 +70,7 @@ impl Bucket {
                 }
             }
         }
-        let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
+        let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize].clone()).collect();
         vec
     }
 }
