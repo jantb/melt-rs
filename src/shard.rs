@@ -1,3 +1,4 @@
+use sqlite::Connection;
 use crate::bloom::BloomFilter;
 use crate::bucket::Bucket;
 use crate::message::Message;
@@ -28,13 +29,13 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message:  &Message, trigrams: Vec<String>) {
-        self.get_bucket().add_message(message, &trigrams)
+    pub fn add_message(&mut self, message:  &Message, trigrams: Vec<String>, conn: &Connection) {
+        self.get_bucket().add_message(message, &trigrams, conn)
     }
 
-    pub fn search(&self, query: &str) -> Vec<Message> {
+    pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
-        let messages:Vec<Message> = self.bucket.iter().map(|b| b.search(&query_bits)).flatten().filter(|m| m.get_value().contains(query)).collect();
+        let messages:Vec<Message> = self.bucket.iter().map(|b| b.search(&query_bits,conn)).flatten().filter(|m| m.get_value().contains(query)).collect();
         return messages
     }
 

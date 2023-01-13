@@ -1,8 +1,9 @@
+use sqlite::{Connection, State};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
 
 pub struct Bucket {
-    messages: Vec<Message>,
+    messages: Vec<i64>,
     bloom_filter: Vec<u64>,
     bloom_count: u8,
     bloom_size: usize,
@@ -24,14 +25,18 @@ impl Bucket {
     }
 
 
-    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>) {
+    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Connection) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
             bloom_filter.add(v)
         });
         self.add_bloom(bloom_filter.get_bitset());
-        self.messages.push(message.clone());
+        let mut statement = conn.prepare("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
+        statement.bind((":value", message.value.as_str())).unwrap();
+        statement.next().unwrap();
+        let id: i64 = statement.read(0).unwrap();
+        self.messages.push(id);
     }
 
     // add current document to the bloom index
@@ -48,7 +53,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query_bits: &Vec<u64>) -> Vec<Message> {
+    pub fn search(&self, query_bits: &Vec<u64>, conn: &Connection) -> Vec<Message> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -71,6 +76,15 @@ impl Bucket {
             }
         }
         let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize].clone()).collect();
-        vec
+        let mut statement = conn.prepare("SELECT value FROM data WHERE id IN (:ids)").unwrap();
+        let x: Vec<_> = vec.iter().map(|i| i.to_string()).collect();
+        statement.bind((":ids", x.join(",").as_str())).unwrap();
+
+        let mut messages = Vec::new();
+        while let State::Row = statement.next().unwrap() {
+            let data: String = statement.read(0).unwrap();
+            messages.push(Message { json: false, value: data });
+        };
+        messages
     }
 }
