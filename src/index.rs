@@ -11,9 +11,10 @@ pub struct SearchIndex {
 impl SearchIndex {
     pub fn new() -> Self {
         let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+        let string = format!("{}/.data.sqlite", buf);
         let index = Self {
             shards: vec![],
-            conn: sqlite::open(format!("{}.data.sqlite", buf)).unwrap(),
+            conn: sqlite::open(string).unwrap(),
         };
         let query = "CREATE TABLE if not exists data
 (
