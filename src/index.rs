@@ -51,8 +51,8 @@ impl SearchIndex {
         };
     }
 
-    pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
-        let messages: Vec<Message> = self.shards.iter().map(|s| s.search(query, conn)).flatten().filter(|s| {
+    pub fn search(&self, query: &str) -> Vec<Message> {
+        let messages: Vec<Message> = self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
             query.split(" ").all(|q| s.value.contains(q))
         }).collect();
         return messages;
@@ -65,10 +65,10 @@ fn test_search() {
     index.add_message(&Message { json: false, value: "notth".to_string() });
     index.add_message(&Message { json: false, value: "hello".to_string() });
 
-    let result = index.search("llo", &index.conn);
+    let result = index.search("llo");
     assert_eq!("hello", result.last().unwrap().value);
 
-    let result = index.search("notth", &index.conn);
+    let result = index.search("notth");
     assert_eq!("notth", result.last().unwrap().value);
 }
 
