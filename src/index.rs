@@ -20,7 +20,6 @@ fn default_conn() -> Connection {
                                                      | OpenFlags::SQLITE_OPEN_NO_MUTEX
                                                      | OpenFlags::SQLITE_OPEN_URI).unwrap();
     connection.execute("PRAGMA synchronous = OFF;",()).unwrap();
-    connection.execute("PRAGMA journal_mode = OFF;", ()).unwrap();
     connection
 }
 
