@@ -1,40 +1,46 @@
-use sqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct SearchIndex {
     shards: Vec<Shard>,
+    #[serde(skip_serializing, skip_deserializing, default = "default_conn")]
     conn: Connection,
+}
+
+fn default_conn() -> Connection {
+    let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+    let path = format!("{}/.melt.sqlite", buf);
+    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_WRITE).unwrap()
 }
 
 impl SearchIndex {
     pub fn new() -> Self {
-        let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
-        let string = format!("{}/.melt.sqlite", buf);
         let index = Self {
             shards: vec![],
-            conn: sqlite::open(string).unwrap(),
+            conn: default_conn(),
         };
-        let query = "CREATE TABLE if not exists data
-(
-    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    value TEXT NOT NULL
-);";
-        index.conn.execute(query).unwrap();
-        index
+        Self::create_table(index)
     }
+
     pub fn new_inmem() -> Self {
         let index = Self {
             shards: vec![],
-            conn: sqlite::open(":memory:").unwrap(),
+            conn: Connection::open_in_memory().unwrap(),
         };
+        Self::create_table(index)
+    }
+
+    fn create_table(index: SearchIndex) -> SearchIndex {
         let query = "CREATE TABLE if not exists data
-(
-    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    value TEXT NOT NULL
-);";
-        index.conn.execute(query).unwrap();
+                        (
+                            id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                            value TEXT NOT NULL
+                        );";
+        index.conn.execute(query, ()).unwrap();
         index
     }
 

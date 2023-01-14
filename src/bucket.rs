@@ -1,7 +1,9 @@
-use sqlite::{Connection, State};
+use rusqlite::{Connection, named_params};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct Bucket {
     messages: Vec<i64>,
     bloom_filter: Vec<u64>,
@@ -33,10 +35,10 @@ impl Bucket {
         });
         self.add_bloom(bloom_filter.get_bitset());
         let mut statement = conn.prepare("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
-        statement.bind((":value", message.value.as_str())).unwrap();
-        statement.next().unwrap();
-        let id: i64 = statement.read(0).unwrap();
-        self.messages.push(id);
+        let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
+        while let Some(row) = rows.next().unwrap(){
+            self.messages.push(row.get(0).unwrap());
+        }
     }
 
     // add current document to the bloom index
@@ -76,15 +78,16 @@ impl Bucket {
             }
         }
         let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize].clone()).collect();
-        let mut statement = conn.prepare("SELECT value FROM data WHERE id IN (:ids)").unwrap();
         let x: Vec<_> = vec.iter().map(|i| i.to_string()).collect();
-        statement.bind((":ids", x.join(",").as_str())).unwrap();
-
         let mut messages = Vec::new();
-        while let State::Row = statement.next().unwrap() {
-            let data: String = statement.read(0).unwrap();
+
+        let mut statement = conn.prepare("SELECT value FROM data WHERE id IN (:ids)").unwrap();
+        let mut rows = statement.query(named_params! { ":ids": x.join(",").as_str() }).unwrap();
+        while let Some(row) = rows.next().unwrap(){
+            let data: String = row.get(0).unwrap();
             messages.push(Message { json: false, value: data });
-        };
+        }
+
         messages
     }
 }
