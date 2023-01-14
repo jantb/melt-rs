@@ -1,11 +1,9 @@
 use rusqlite::{Connection, named_params};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
 pub struct Bucket {
-    messages: Vec<i64>,
+    messages: [i64;64],
     bloom_filter: Vec<u64>,
     bloom_count: u8,
     bloom_size: usize,
@@ -18,7 +16,7 @@ impl Bucket {
         bloom_k: u64,
     ) -> Self {
         Self {
-            messages: vec![],
+            messages: [-1;64],
             bloom_filter: vec![0; bloom_size * 64],
             bloom_count: 0,
             bloom_size,
@@ -37,7 +35,7 @@ impl Bucket {
         let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
         let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
         while let Some(row) = rows.next().unwrap(){
-            self.messages.push(row.get(0).unwrap());
+            self.messages[(self.bloom_count - 1) as usize] = row.get(0).unwrap();
         }
     }
 
@@ -77,7 +75,7 @@ impl Bucket {
                 }
             }
         }
-        let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize].clone()).collect();
+        let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
         let x: Vec<_> = vec.iter().map(|i| i.to_string()).collect();
         let mut messages = Vec::new();
 

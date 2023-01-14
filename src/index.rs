@@ -2,12 +2,9 @@ use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
 pub struct SearchIndex {
     shards: Vec<Shard>,
-    #[serde(skip_serializing, skip_deserializing, default = "default_conn")]
     conn: Connection,
 }
 
