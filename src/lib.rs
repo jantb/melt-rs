@@ -18,3 +18,7 @@ mod trigrams;
 pub fn get_search_index() -> index::SearchIndex {
     index::SearchIndex::new()
 }
+
+pub fn get_search_index_in_mem() -> index::SearchIndex {
+    index::SearchIndex::new_in_mem()
+}

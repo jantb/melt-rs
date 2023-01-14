@@ -26,7 +26,7 @@ impl SearchIndex {
         Self::create_table(index)
     }
 
-    pub fn new_inmem() -> Self {
+    pub fn new_in_mem() -> Self {
         let index = Self {
             shards: vec![],
             conn: Connection::open_in_memory().unwrap(),
@@ -68,7 +68,7 @@ impl SearchIndex {
 
 #[test]
 fn test_search() {
-    let mut index = SearchIndex::new_inmem();
+    let mut index = SearchIndex::new_in_mem();
     index.add_message(&Message { json: false, value: "notth".to_string() });
     index.add_message(&Message { json: false, value: "hello".to_string() });
 
