@@ -54,8 +54,8 @@ impl BloomFilter {
 
 pub fn estimate_parameters(n: u64, p: f64) -> (usize, u64) {
     let m = ((-1.0 * n as f64 * p.ln()) / (2.0_f64.ln().powi(2))).ceil() as u64;
-    let m = 64 * ((m + 63) / 64) / 64;
     let k = ((2.0_f64.ln() * m as f64) / n as f64).ceil() as u64;
+    let m = 64 * ((m + 63) / 64) / 64;
     (m as usize, k)
 }
 

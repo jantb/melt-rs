@@ -35,7 +35,7 @@ impl Shard {
 
     pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
-        let messages:Vec<Message> = self.bucket.iter().map(|b| b.search(&query_bits,conn)).flatten().filter(|m| m.get_value().contains(query)).collect();
+        let messages:Vec<Message> = self.bucket.iter().map(|b| b.search(query, &query_bits,conn)).flatten().collect();
         return messages
     }
 

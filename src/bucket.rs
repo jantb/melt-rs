@@ -1,9 +1,9 @@
-use rusqlite::{Connection, named_params};
+use rusqlite::{Connection, named_params, params};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
 
 pub struct Bucket {
-    messages: [i64;64],
+    messages: [i64; 64],
     bloom_filter: Vec<u64>,
     bloom_count: u8,
     bloom_size: usize,
@@ -16,7 +16,7 @@ impl Bucket {
         bloom_k: u64,
     ) -> Self {
         Self {
-            messages: [-1;64],
+            messages: [-1; 64],
             bloom_filter: vec![0; bloom_size * 64],
             bloom_count: 0,
             bloom_size,
@@ -34,7 +34,7 @@ impl Bucket {
         self.add_bloom(bloom_filter.get_bitset());
         let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
         let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
-        while let Some(row) = rows.next().unwrap(){
+        while let Some(row) = rows.next().unwrap() {
             self.messages[(self.bloom_count - 1) as usize] = row.get(0).unwrap();
         }
     }
@@ -53,7 +53,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query_bits: &Vec<u64>, conn: &Connection) -> Vec<Message> {
+    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Connection) -> Vec<Message> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -75,15 +75,20 @@ impl Bucket {
                 }
             }
         }
+        if results.is_empty() {return vec![] }
         let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
-        let x: Vec<_> = vec.iter().map(|i| i.to_string()).collect();
         let mut messages = Vec::new();
+        for x in vec {
+            let mut statement = conn.prepare_cached("SELECT value FROM data WHERE id = :ids").unwrap();
 
-        let mut statement = conn.prepare_cached("SELECT value FROM data WHERE id IN (:ids)").unwrap();
-        let mut rows = statement.query(named_params! { ":ids": x.join(",").as_str() }).unwrap();
-        while let Some(row) = rows.next().unwrap(){
-            let data: String = row.get(0).unwrap();
-            messages.push(Message { json: false, value: data });
+            let rows = statement.query_map(params![x], |row| row.get(0)).unwrap();
+
+            for value in rows {
+                let data: String = value.unwrap();
+                if data.contains(query) {
+                    messages.push(Message { json: false, value: data });
+                }
+            }
         }
 
         messages
