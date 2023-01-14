@@ -1,29 +1,30 @@
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-
+use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
 
 pub struct SearchIndex {
     shards: Vec<Shard>,
-    pub conn: Pool<SqliteConnectionManager>,
+    conn: Connection,
 }
 
-fn default_conn() -> Pool<SqliteConnectionManager> {
+fn default_conn(thread:u8) -> Connection {
     let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
-    let path = format!("{}/.melt.sqlite", buf);
-    let manager = SqliteConnectionManager::file(path);
-    let pool = Pool::new(manager).unwrap();
-    pool.get().unwrap().execute("PRAGMA synchronous = OFF;", ()).unwrap();
-    pool
+    let path = format!("{}/.melt{thread}.sqlite", buf);
+    let connection = Connection::open_with_flags(path,
+                                                 OpenFlags::SQLITE_OPEN_READ_WRITE
+                                                     | OpenFlags::SQLITE_OPEN_CREATE
+                                                     | OpenFlags::SQLITE_OPEN_NO_MUTEX
+                                                     | OpenFlags::SQLITE_OPEN_URI).unwrap();
+    connection.execute("PRAGMA synchronous = OFF;",()).unwrap();
+    connection
 }
 
 impl SearchIndex {
-    pub fn new() -> Self {
+    pub fn new(thread:u8) -> Self {
         let index = Self {
             shards: vec![],
-            conn: default_conn(),
+            conn: default_conn(thread),
         };
         Self::create_table(index)
     }
@@ -31,20 +32,10 @@ impl SearchIndex {
     pub fn new_in_mem() -> Self {
         let index = Self {
             shards: vec![],
-            conn: Pool::new(SqliteConnectionManager::memory()).unwrap(),
+            conn: Connection::open_in_memory().unwrap(),
         };
         Self::create_table(index)
     }
-
-
-    pub fn new_with_pool(pool: Pool<SqliteConnectionManager>) -> Self {
-        let index = Self {
-            shards: vec![],
-            conn: pool,
-        };
-        Self::create_table(index)
-    }
-
 
     fn create_table(index: SearchIndex) -> SearchIndex {
         let query = "CREATE TABLE if not exists data
@@ -52,7 +43,7 @@ impl SearchIndex {
                             id   INTEGER PRIMARY KEY AUTOINCREMENT,
                             value TEXT NOT NULL
                         );";
-        index.conn.get().unwrap().execute(query, ()).unwrap();
+        index.conn.execute(query, ()).unwrap();
         index
     }
 
@@ -71,7 +62,7 @@ impl SearchIndex {
     }
 
     pub fn search(&self, query: &str) -> Vec<Message> {
-        if query.len() < 3 {return vec![]};
+        if query.len() < 3 { return vec![]; };
         return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
             query.split(" ").all(|q| s.value.contains(q))
         }).collect();

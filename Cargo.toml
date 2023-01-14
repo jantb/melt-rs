@@ -9,7 +9,5 @@ homepage = "https://github.com/jantb/melt-rs.git"
 
 [dependencies]
 ascii_utils = "0.9.3"
-rusqlite = { version = "0.28.0", features = ["bundled"] }
 dirs = "4.0"
-r2d2_sqlite = "0.21.0"
-r2d2 = "0.8.8"
+rusqlite = { version = "0.28.0", features = ["bundled"] }

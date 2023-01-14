@@ -1,6 +1,5 @@
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{named_params, params};
+
+use rusqlite::{Connection, named_params, params};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
 
@@ -27,15 +26,14 @@ impl Bucket {
     }
 
 
-    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Pool<SqliteConnectionManager>) {
+    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Connection) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
             bloom_filter.add(v)
         });
         self.add_bloom(bloom_filter.get_bitset());
-        let connection = conn.get().unwrap();
-        let mut statement = connection.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
+        let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
         let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
         while let Some(row) = rows.next().unwrap() {
             self.messages[(self.bloom_count - 1) as usize] = row.get(0).unwrap();
@@ -56,7 +54,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Pool<SqliteConnectionManager>) -> Vec<Message> {
+    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Connection) -> Vec<Message> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -82,8 +80,7 @@ impl Bucket {
         let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
         let mut messages = Vec::new();
         for x in vec {
-            let connection = conn.get().unwrap();
-            let mut statement = connection.prepare_cached("SELECT value FROM data WHERE id = :ids").unwrap();
+            let mut statement = conn.prepare_cached("SELECT value FROM data WHERE id = :ids").unwrap();
 
             let rows = statement.query_map(params![x], |row| row.get(0)).unwrap();
 
