@@ -1,4 +1,4 @@
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::Connection;
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
@@ -12,9 +12,9 @@ pub struct SearchIndex {
 }
 
 fn default_conn() -> Connection {
-    let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
-    let path = format!("{}/.melt.sqlite", buf);
-    Connection::open(path).unwrap()
+   // let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+   // let path = format!("{}/.melt.sqlite", buf);
+    Connection::open(".melt.sqlite").unwrap()
 }
 
 impl SearchIndex {
