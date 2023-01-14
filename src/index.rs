@@ -14,7 +14,7 @@ pub struct SearchIndex {
 fn default_conn() -> Connection {
     let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
     let path = format!("{}/.melt.sqlite", buf);
-    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_CREATE).unwrap()
+    Connection::open(path).unwrap()
 }
 
 impl SearchIndex {

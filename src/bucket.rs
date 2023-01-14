@@ -34,7 +34,7 @@ impl Bucket {
             bloom_filter.add(v)
         });
         self.add_bloom(bloom_filter.get_bitset());
-        let mut statement = conn.prepare("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
+        let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
         let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
         while let Some(row) = rows.next().unwrap(){
             self.messages.push(row.get(0).unwrap());
@@ -81,7 +81,7 @@ impl Bucket {
         let x: Vec<_> = vec.iter().map(|i| i.to_string()).collect();
         let mut messages = Vec::new();
 
-        let mut statement = conn.prepare("SELECT value FROM data WHERE id IN (:ids)").unwrap();
+        let mut statement = conn.prepare_cached("SELECT value FROM data WHERE id IN (:ids)").unwrap();
         let mut rows = statement.query(named_params! { ":ids": x.join(",").as_str() }).unwrap();
         while let Some(row) = rows.next().unwrap(){
             let data: String = row.get(0).unwrap();
