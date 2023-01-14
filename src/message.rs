@@ -11,7 +11,7 @@ impl Message {
         return trigram(&self.value);
     }
 
-    pub fn get_value(&self) -> String {
-        return self.value.clone();
+    pub fn get_value(&self) -> &str {
+        return self.value.as_str();
     }
 }

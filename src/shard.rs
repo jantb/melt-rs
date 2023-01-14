@@ -29,8 +29,8 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message:  &Message, trigrams: Vec<String>, conn: &Connection) {
-        self.get_bucket().add_message(message, &trigrams, conn)
+    pub fn add_message(&mut self, message:  &Message, trigrams: &Vec<String>, conn: &Connection) {
+        self.get_bucket().add_message(message, trigrams, conn)
     }
 
     pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
