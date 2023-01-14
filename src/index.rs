@@ -1,23 +1,22 @@
-use rusqlite::{Connection, OpenFlags};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
 use crate::shard::Shard;
 
 pub struct SearchIndex {
     shards: Vec<Shard>,
-    conn: Connection,
+    pub conn: Pool<SqliteConnectionManager>,
 }
 
-fn default_conn() -> Connection {
+fn default_conn() -> Pool<SqliteConnectionManager> {
     let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
     let path = format!("{}/.melt.sqlite", buf);
-    let connection = Connection::open_with_flags(path,
-                                                 OpenFlags::SQLITE_OPEN_READ_WRITE
-                                                     | OpenFlags::SQLITE_OPEN_CREATE
-                                                     | OpenFlags::SQLITE_OPEN_NO_MUTEX
-                                                     | OpenFlags::SQLITE_OPEN_URI).unwrap();
-    connection.execute("PRAGMA synchronous = OFF;",()).unwrap();
-    connection
+    let manager = SqliteConnectionManager::file(path);
+    let pool = Pool::new(manager).unwrap();
+    pool.get().unwrap().execute("PRAGMA synchronous = OFF;", ()).unwrap();
+    pool
 }
 
 impl SearchIndex {
@@ -32,10 +31,20 @@ impl SearchIndex {
     pub fn new_in_mem() -> Self {
         let index = Self {
             shards: vec![],
-            conn: Connection::open_in_memory().unwrap(),
+            conn: Pool::new(SqliteConnectionManager::memory()).unwrap(),
         };
         Self::create_table(index)
     }
+
+
+    pub fn new_with_pool(pool: Pool<SqliteConnectionManager>) -> Self {
+        let index = Self {
+            shards: vec![],
+            conn: pool,
+        };
+        Self::create_table(index)
+    }
+
 
     fn create_table(index: SearchIndex) -> SearchIndex {
         let query = "CREATE TABLE if not exists data
@@ -43,13 +52,13 @@ impl SearchIndex {
                             id   INTEGER PRIMARY KEY AUTOINCREMENT,
                             value TEXT NOT NULL
                         );";
-        index.conn.execute(query, ()).unwrap();
+        index.conn.get().unwrap().execute(query, ()).unwrap();
         index
     }
 
     pub fn add_message(&mut self, message: &Message) {
         let trigrams = message.get_trigram();
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.01);
+        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.1);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
@@ -62,6 +71,7 @@ impl SearchIndex {
     }
 
     pub fn search(&self, query: &str) -> Vec<Message> {
+        if query.len() < 3 {return vec![]};
         return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
             query.split(" ").all(|q| s.value.contains(q))
         }).collect();

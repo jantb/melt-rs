@@ -1,4 +1,6 @@
-use rusqlite::Connection;
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+
 use crate::bloom::BloomFilter;
 use crate::bucket::Bucket;
 use crate::message::Message;
@@ -29,14 +31,13 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message:  &Message, trigrams: &Vec<String>, conn: &Connection) {
+    pub fn add_message(&mut self, message:  &Message, trigrams: &Vec<String>, conn: &Pool<SqliteConnectionManager>) {
         self.get_bucket().add_message(message, trigrams, conn)
     }
 
-    pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
+    pub fn search(&self, query: &str, conn: &Pool<SqliteConnectionManager>) -> Vec<Message> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
-        let messages:Vec<Message> = self.bucket.iter().map(|b| b.search(query, &query_bits,conn)).flatten().collect();
-        return messages
+        return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect()
     }
 
     fn get_query_bits(&self, trigrams: Vec<String>) -> Vec<u64> {
