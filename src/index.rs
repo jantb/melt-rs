@@ -1,5 +1,7 @@
+use std::fs;
 use std::fs::File;
-use std::io::{BufReader, Error};
+use std::io::{ Error, Read};
+use bincode::deserialize;
 use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
@@ -25,24 +27,26 @@ fn default_conn(thread: u8) -> Connection {
 
 impl SearchIndex {
     pub fn save_to_json(&self) -> Result<(), Error> {
-        let serialized = serde_json::to_vec(self.shards.iter().as_slice())?;
+        let serialized: Vec<u8> = bincode::serialize(&self.shards).unwrap();
         let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
-        let path = format!("{}/.melt_index{}.sqlite", buf,self.thread);
+        let path = format!("{}/.melt_index{}.dat", buf, self.thread);
 
-        std::fs::write(path, serialized)?;
+        fs::write(path, serialized)?;
         Ok(())
     }
 
-    pub fn load_from_json(thread: u8) -> Self {
 
+    pub fn load_from_json(thread: u8) -> Self {
         let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
-        let path = format!("{}/.melt_index{}.sqlite", buf,thread);
-        let file = File::open(path);
+        let path = format!("{}/.melt_index{}.dat", buf, thread);
+        let file = get_file_as_byte_vec(&path);
 
         match file {
             Ok(file) => {
-                let reader = BufReader::new(file);
-                let shards: Vec<Shard> = serde_json::from_reader(reader).unwrap_or(vec![]);
+                let shards: Vec<Shard> = match deserialize(&file) {
+                    Ok(shards) => shards,
+                    Err(_) => vec![],
+                };
                 Self {
                     shards,
                     conn: default_conn(thread),
@@ -104,6 +108,15 @@ impl SearchIndex {
         let x: Vec<_> = self.shards.iter().map(|s| s.size.clone()).collect();
         x.iter().sum()
     }
+}
+
+fn get_file_as_byte_vec(filename: &String) -> Result<Vec<u8>, Error> {
+    let mut f = File::open(&filename)?;
+    let metadata = fs::metadata(&filename)?;
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer)?;
+
+    Ok(buffer)
 }
 
 #[test]
