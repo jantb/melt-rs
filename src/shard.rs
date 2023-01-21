@@ -9,6 +9,7 @@ use crate::trigrams::trigram;
 #[derive(Serialize, Deserialize)]
 pub struct Shard {
     bucket: Vec<Bucket>,
+    pub size: usize,
     bloom_size: usize,
     bloom_k: u64,
 }
@@ -20,6 +21,7 @@ impl Shard {
     ) -> Self {
         Self {
             bucket: vec![],
+            size: 0,
             bloom_size,
             bloom_k,
         }
@@ -32,22 +34,23 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message:  &Message, trigrams: &Vec<String>, conn: &Connection) {
-        self.get_bucket().add_message(message, trigrams, conn)
+    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Connection) {
+        self.get_bucket().add_message(message, trigrams, conn);
+        self.size += 1;
     }
 
     pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
-        return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect()
+        return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect();
     }
 
     fn get_query_bits(&self, trigrams: Vec<String>) -> Vec<u64> {
-        let mut bloom_filter = BloomFilter::new(self.bloom_size*64, self.bloom_k);
+        let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
         trigrams.iter().for_each(|t| bloom_filter.add(t));
         return Self::get_set_bits(bloom_filter.get_bitset());
     }
 
-    fn get_bucket(&mut self) ->  &mut Bucket {
+    fn get_bucket(&mut self) -> &mut Bucket {
         if self.bucket.is_empty() || self.bucket.last().unwrap().is_full() {
             self.bucket.push(Bucket::new(self.bloom_size, self.bloom_k));
         }

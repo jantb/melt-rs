@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufReader, Error};
 use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
 use crate::message::Message;
@@ -5,10 +7,11 @@ use crate::shard::Shard;
 
 pub struct SearchIndex {
     shards: Vec<Shard>,
+    thread: usize,
     conn: Connection,
 }
 
-fn default_conn(thread:u8) -> Connection {
+fn default_conn(thread: u8) -> Connection {
     let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
     let path = format!("{}/.melt{thread}.sqlite", buf);
     let connection = Connection::open_with_flags(path,
@@ -16,23 +19,46 @@ fn default_conn(thread:u8) -> Connection {
                                                      | OpenFlags::SQLITE_OPEN_CREATE
                                                      | OpenFlags::SQLITE_OPEN_NO_MUTEX
                                                      | OpenFlags::SQLITE_OPEN_URI).unwrap();
-    connection.execute("PRAGMA synchronous = OFF;",()).unwrap();
+    connection.execute("PRAGMA synchronous = OFF;", ()).unwrap();
     connection
 }
 
 impl SearchIndex {
-    pub fn new(thread:u8) -> Self {
-        let index = Self {
-            shards: vec![],
-            conn: default_conn(thread),
-        };
-        Self::create_table(index)
+    pub fn save_to_json(&self) -> Result<(), Error> {
+        let serialized = serde_json::to_vec(self.shards.iter().as_slice())?;
+        std::fs::write(format!("index{}.dat", self.thread), serialized)?;
+        Ok(())
+    }
+
+    pub fn load_from_json(thread: u8) -> Self {
+        let file = File::open(format!("index{thread}.dat"));
+
+        match file {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                let shards: Vec<Shard> = serde_json::from_reader(reader).unwrap_or(vec![]);
+                Self {
+                    shards,
+                    conn: default_conn(thread),
+                    thread: thread as usize,
+                }
+            }
+            Err(_) => {
+                let index = Self {
+                    shards: vec![],
+                    conn: default_conn(thread),
+                    thread: thread as usize,
+                };
+                Self::create_table(index)
+            }
+        }
     }
 
     pub fn new_in_mem() -> Self {
         let index = Self {
             shards: vec![],
             conn: Connection::open_in_memory().unwrap(),
+            thread: 0,
         };
         Self::create_table(index)
     }
@@ -66,6 +92,11 @@ impl SearchIndex {
         return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
             query.split(" ").all(|q| s.value.contains(q))
         }).collect();
+    }
+
+    pub fn get_size(&self) -> usize {
+        let x: Vec<_> = self.shards.iter().map(|s| s.size.clone()).collect();
+        x.iter().sum()
     }
 }
 
