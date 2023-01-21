@@ -26,12 +26,18 @@ fn default_conn(thread: u8) -> Connection {
 impl SearchIndex {
     pub fn save_to_json(&self) -> Result<(), Error> {
         let serialized = serde_json::to_vec(self.shards.iter().as_slice())?;
-        std::fs::write(format!("index{}.dat", self.thread), serialized)?;
+        let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+        let path = format!("{}/.melt_index{}.sqlite", buf,self.thread);
+
+        std::fs::write(path, serialized)?;
         Ok(())
     }
 
     pub fn load_from_json(thread: u8) -> Self {
-        let file = File::open(format!("index{thread}.dat"));
+
+        let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+        let path = format!("{}/.melt_index{}.sqlite", buf,thread);
+        let file = File::open(path);
 
         match file {
             Ok(file) => {
