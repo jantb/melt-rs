@@ -11,3 +11,4 @@ homepage = "https://github.com/jantb/melt-rs.git"
 ascii_utils = "0.9.3"
 dirs = "4.0"
 rusqlite = { version = "0.28.0", features = ["bundled"] }
+serde = { version = "1.0.152", features = ["derive"] }

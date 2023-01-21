@@ -2,9 +2,11 @@
 use rusqlite::{Connection, named_params, params};
 use crate::bloom::BloomFilter;
 use crate::message::Message;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct Bucket {
-    messages: [i64; 64],
+    messages: Vec<i64>,
     bloom_filter: Vec<u64>,
     bloom_count: u8,
     bloom_size: usize,
@@ -17,7 +19,7 @@ impl Bucket {
         bloom_k: u64,
     ) -> Self {
         Self {
-            messages: [-1; 64],
+            messages: vec![-1; 64],
             bloom_filter: vec![0; bloom_size * 64],
             bloom_count: 0,
             bloom_size,

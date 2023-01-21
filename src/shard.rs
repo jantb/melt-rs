@@ -1,10 +1,12 @@
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 
 use crate::bloom::BloomFilter;
 use crate::bucket::Bucket;
 use crate::message::Message;
 use crate::trigrams::trigram;
 
+#[derive(Serialize, Deserialize)]
 pub struct Shard {
     bucket: Vec<Bucket>,
     bloom_size: usize,
