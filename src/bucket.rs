@@ -1,7 +1,6 @@
 
 use rusqlite::{Connection, named_params, params};
 use crate::bloom::BloomFilter;
-use crate::message::Message;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -28,7 +27,7 @@ impl Bucket {
     }
 
 
-    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Connection) {
+    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &Connection) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
@@ -36,7 +35,7 @@ impl Bucket {
         });
         self.add_bloom(bloom_filter.get_bitset());
         let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
-        let mut rows = statement.query(named_params! { ":value": message.value.as_str() }).unwrap();
+        let mut rows = statement.query(named_params! { ":value": message }).unwrap();
         while let Some(row) = rows.next().unwrap() {
             self.messages[(self.bloom_count - 1) as usize] = row.get(0).unwrap();
         }
@@ -56,7 +55,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Connection) -> Vec<Message> {
+    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Connection) -> Vec<String> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -89,7 +88,7 @@ impl Bucket {
             for value in rows {
                 let data: String = value.unwrap();
                 if data.contains(query) {
-                    messages.push(Message { json: false, value: data });
+                    messages.push(data);
                 }
             }
         }

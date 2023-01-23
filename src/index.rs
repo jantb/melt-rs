@@ -4,8 +4,8 @@ use std::io::{ Error, Read};
 use bincode::deserialize;
 use rusqlite::{Connection, OpenFlags};
 use crate::bloom::estimate_parameters;
-use crate::message::Message;
 use crate::shard::Shard;
+use crate::trigrams::trigram;
 
 pub struct SearchIndex {
     shards: Vec<Shard>,
@@ -83,8 +83,8 @@ impl SearchIndex {
         index
     }
 
-    pub fn add_message(&mut self, message: &Message) {
-        let trigrams = message.get_trigram();
+    pub fn add_message(&mut self, message: &str) {
+        let trigrams = trigram(message);
         let (m, k) = estimate_parameters(trigrams.len() as u64, 0.02);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
@@ -97,10 +97,10 @@ impl SearchIndex {
         };
     }
 
-    pub fn search(&self, query: &str) -> Vec<Message> {
+    pub fn search(&self, query: &str) -> Vec<String> {
         if query.len() < 3 { return vec![]; };
         return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
-            query.split(" ").all(|q| s.value.contains(q))
+            query.split(" ").all(|q| s.contains(q))
         }).collect();
     }
 
@@ -122,14 +122,14 @@ fn get_file_as_byte_vec(filename: &String) -> Result<Vec<u8>, Error> {
 #[test]
 fn test_search() {
     let mut index = SearchIndex::new_in_mem();
-    index.add_message(&Message { json: false, value: "notth".to_string() });
-    index.add_message(&Message { json: false, value: "hello".to_string() });
+    index.add_message(&"notth");
+    index.add_message(&"hello");
 
     let result = index.search("llo");
-    assert_eq!("hello", result.last().unwrap().value);
+    assert_eq!("hello", result.last().unwrap());
 
     let result = index.search("notth");
-    assert_eq!("notth", result.last().unwrap().value);
+    assert_eq!("notth", result.last().unwrap());
 }
 
 

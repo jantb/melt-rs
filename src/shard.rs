@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::bloom::BloomFilter;
 use crate::bucket::Bucket;
-use crate::message::Message;
 use crate::trigrams::trigram;
 
 #[derive(Serialize, Deserialize)]
@@ -34,12 +33,12 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message: &Message, trigrams: &Vec<String>, conn: &Connection) {
+    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &Connection) {
         self.get_bucket().add_message(message, trigrams, conn);
         self.size += 1;
     }
 
-    pub fn search(&self, query: &str, conn: &Connection) -> Vec<Message> {
+    pub fn search(&self, query: &str, conn: &Connection) -> Vec<String> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
         return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect();
     }
