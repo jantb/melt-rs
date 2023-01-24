@@ -85,7 +85,7 @@ impl SearchIndex {
 
     pub fn add_message(&mut self, message: &str) {
         let trigrams = trigram(message);
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.1);
+        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.5);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
