@@ -85,7 +85,7 @@ impl SearchIndex {
 
     pub fn add_message(&mut self, message: &str) {
         let trigrams = trigram(message);
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.01);
+        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.1);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
@@ -119,6 +119,11 @@ impl SearchIndex {
     pub fn get_size(&self) -> usize {
         let x: Vec<_> = self.shards.iter().map(|s| s.size.clone()).collect();
         x.iter().sum()
+    }
+
+    pub fn get_size_bytes(&self) -> usize {
+        let serialized: Vec<u8> = bincode::serialize(&self.shards).unwrap();
+        serialized.len()
     }
 }
 
