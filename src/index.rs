@@ -107,7 +107,7 @@ impl SearchIndex {
             for result in shard_results {
                 if query_words.iter().all(|q| result.contains(q)) {
                     results.push(result);
-                    if results.len() == 2000 {
+                    if results.len() == 100 {
                         return results;
                     }
                 }
