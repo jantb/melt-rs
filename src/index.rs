@@ -85,7 +85,7 @@ impl SearchIndex {
 
     pub fn add_message(&mut self, message: &str) {
         let trigrams = trigram(message);
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.02);
+        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.01);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
@@ -98,10 +98,22 @@ impl SearchIndex {
     }
 
     pub fn search(&self, query: &str) -> Vec<String> {
-        if query.len() < 3 { return vec![]; };
-        return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
-            query.split(" ").all(|q| s.contains(q))
-        }).take(2000).collect();
+        if query.len() < 3 { return vec![]; }
+        let query_words: Vec<&str> = query.split(" ").collect();
+        let mut results = vec![];
+
+        for shard in self.shards.iter() {
+            let shard_results = shard.search(query, &self.conn);
+            for result in shard_results {
+                if query_words.iter().all(|q| result.contains(q)) {
+                    results.push(result);
+                    if results.len() == 2000 {
+                        return results;
+                    }
+                }
+            }
+        }
+        return results;
     }
 
     pub fn get_size(&self) -> usize {
