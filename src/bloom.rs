@@ -43,3 +43,25 @@ pub fn estimate_parameters(n: u64, p: f64) -> (usize, u64) {
     (m as usize, k)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let num_bits = 100;
+        let hashes = 5;
+        let bf = BloomFilter::new(num_bits, hashes);
+        assert_eq!(bf.num_bits, num_bits);
+        assert_eq!(bf.hashes, hashes);
+        assert_eq!(bf.bitset.len(), (num_bits + 63) / 64);
+    }
+
+    #[test]
+    fn test_add() {
+        let mut bf = BloomFilter::new(100, 5);
+        bf.add(&"hello");
+        let bitset = bf.get_bitset();
+        assert_ne!(bitset[0], 0);
+    }
+}
