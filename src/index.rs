@@ -101,7 +101,7 @@ impl SearchIndex {
         if query.len() < 3 { return vec![]; };
         return self.shards.iter().map(|s| s.search(query, &self.conn)).flatten().filter(|s| {
             query.split(" ").all(|q| s.contains(q))
-        }).collect();
+        }).take(2000).collect();
     }
 
     pub fn get_size(&self) -> usize {
