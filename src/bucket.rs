@@ -1,11 +1,15 @@
-
-use rusqlite::{Connection, named_params, params};
+use std::io::Read;
+use std::sync::atomic::Ordering;
+use flate2::bufread::DeflateEncoder;
+use flate2::read::DeflateDecoder;
+use rocksdb::{DBWithThreadMode, SingleThreaded};
 use crate::bloom::BloomFilter;
 use serde::{Deserialize, Serialize};
+use crate::index::GLOBAL_COUNT;
 
 #[derive(Serialize, Deserialize)]
 pub struct Bucket {
-    messages: Vec<i64>,
+    messages: Vec<usize>,
     bloom_filter: Vec<u64>,
     bloom_count: u8,
     bloom_size: usize,
@@ -18,7 +22,7 @@ impl Bucket {
         bloom_k: u64,
     ) -> Self {
         Self {
-            messages: vec![-1; 64],
+            messages: vec![0; 64],
             bloom_filter: vec![0; bloom_size * 64],
             bloom_count: 0,
             bloom_size,
@@ -27,18 +31,16 @@ impl Bucket {
     }
 
 
-    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &Connection) {
+    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<SingleThreaded>) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
             bloom_filter.add(v)
         });
         self.add_bloom(bloom_filter.get_bitset());
-        let mut statement = conn.prepare_cached("INSERT INTO data(value) values (:value) RETURNING id").unwrap();
-        let mut rows = statement.query(named_params! { ":value": message }).unwrap();
-        while let Some(row) = rows.next().unwrap() {
-            self.messages[(self.bloom_count - 1) as usize] = row.get(0).unwrap();
-        }
+        let count = GLOBAL_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+        conn.put(count.to_le_bytes(), message).unwrap();
+        self.messages[(self.bloom_count - 1) as usize] = count;
     }
 
     // add current document to the bloom index
@@ -55,7 +57,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &Connection) -> Vec<String> {
+    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &DBWithThreadMode<SingleThreaded>) -> Vec<String> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -77,22 +79,31 @@ impl Bucket {
                 }
             }
         }
-        if results.is_empty() {return vec![] }
+        if results.is_empty() { return vec![]; }
         let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
         let mut messages = Vec::new();
         for x in vec {
-            let mut statement = conn.prepare_cached("SELECT value FROM data WHERE id = :ids").unwrap();
-
-            let rows = statement.query_map(params![x], |row| row.get(0)).unwrap();
-
-            for value in rows {
-                let data: String = value.unwrap();
-                if data.contains(query) {
-                    messages.push(data);
-                }
+            let result = String::from_utf8(conn.get(x.to_le_bytes()).unwrap().unwrap()).unwrap();
+            if result.contains(&query) {
+                messages.push(result);
             }
         }
 
         messages
     }
+}
+
+fn compress(data: &str) -> Vec<u8> {
+    let data_bytes = data.as_bytes();
+    let mut encoder = DeflateEncoder::new(data_bytes, flate2::Compression::default());
+    let mut compressed_data = Vec::new();
+    encoder.read_to_end(&mut compressed_data).unwrap();
+    compressed_data
+}
+
+fn deflate(data: &[u8]) -> String {
+    let mut decoder = DeflateDecoder::new(data);
+    let mut decompressed_data = Vec::new();
+    decoder.read_to_end(&mut decompressed_data).unwrap();
+    String::from_utf8(decompressed_data).unwrap()
 }

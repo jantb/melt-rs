@@ -18,7 +18,4 @@ pub fn get_search_index(thread :u8) -> index::SearchIndex {
     index::SearchIndex::load_from_json(thread)
 }
 
-pub fn get_search_index_in_mem() -> index::SearchIndex {
-    index::SearchIndex::new_in_mem()
-}
 
