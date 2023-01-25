@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{ Error, Read};
 use std::sync::atomic::AtomicUsize;
 use bincode::deserialize;
-use rocksdb::{DB, DBWithThreadMode, SingleThreaded};
+use rocksdb::{DB, DBCompressionType, DBWithThreadMode, Options, SingleThreaded};
 use crate::bloom::estimate_parameters;
 
 use crate::shard::Shard;
@@ -19,7 +19,11 @@ pub struct SearchIndex {
 fn default_conn(thread: u8) -> DBWithThreadMode<SingleThreaded> {
     let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
     let path = format!("{}/.melt{thread}.db", buf);
-    let db = DB::open_default(path).unwrap();
+    let mut opts = Options::default();
+    opts.create_if_missing(true);
+    opts.create_missing_column_families(true);
+    opts.set_compression_type(DBCompressionType::Zstd);
+    let db = DB::open_cf(&opts, path, &["default"]).unwrap();
     db
 }
 
