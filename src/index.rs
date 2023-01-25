@@ -23,6 +23,7 @@ fn default_conn(thread: u8) -> DBWithThreadMode<SingleThreaded> {
     opts.create_if_missing(true);
     opts.create_missing_column_families(true);
     opts.set_compression_type(DBCompressionType::Zstd);
+    opts.set_zstd_max_train_bytes(100 * 16384);
     let db = DB::open_cf(&opts, path, &["default"]).unwrap();
     db
 }
