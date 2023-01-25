@@ -5,6 +5,7 @@ use std::sync::atomic::AtomicUsize;
 use bincode::deserialize;
 use rocksdb::{DB, DBWithThreadMode, SingleThreaded};
 use crate::bloom::estimate_parameters;
+
 use crate::shard::Shard;
 use crate::trigrams::trigram;
 pub static GLOBAL_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -63,7 +64,8 @@ impl SearchIndex {
 
     pub fn add_message(&mut self, message: &str) {
         let trigrams = trigram(message);
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.7);
+        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.6);
+       // let (m, k) = (24, 1);
 
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
