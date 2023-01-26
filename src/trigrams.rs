@@ -1,4 +1,5 @@
 use ascii_utils::Check;
+use rayon::prelude::*;
 
 #[test]
 fn test_get_trigram() {
@@ -7,23 +8,24 @@ fn test_get_trigram() {
 }
 
 pub fn trigram(word: &str) -> Vec<String> {
-    let mut word = word.chars().filter(|&c| c.is_printable() || c.is_ascii()).collect::<String>();
+    let mut word = word
+        .chars()
+        .filter(|&c| c.is_printable() || c.is_ascii())
+        .collect::<String>();
     word.make_ascii_lowercase();
-    let chars:Vec<char> = word.chars().collect();
+    let chars: Vec<char> = word.chars().collect();
     if chars.len() < 3 {
         return vec![];
     }
 
-    let mut trigrams = Vec::with_capacity(chars.len() - 2);
-    let mut seen = std::collections::HashSet::new();
-
-    for i in 1..chars.len() - 1 {
-        let trigram = &chars[i-1..i+2];
-        if !seen.contains(trigram) {
-            seen.insert(trigram);
-            trigrams.push(trigram.into_iter().collect());
-        }
-    }
+    let trigrams = (1..chars.len() - 1)
+        .into_par_iter()
+        .filter_map(|i| {
+            let trigram = &chars[i - 1..i + 2];
+            let trigram_str = trigram.into_iter().collect();
+            Some(trigram_str)
+        })
+        .collect();
 
     trigrams
 }

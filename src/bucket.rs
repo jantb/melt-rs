@@ -1,5 +1,5 @@
 use std::sync::atomic::Ordering;
-use rocksdb::{DBWithThreadMode, SingleThreaded};
+use rocksdb::{DBWithThreadMode, MultiThreaded};
 use crate::bloom::BloomFilter;
 use serde::{Deserialize, Serialize};
 use crate::index::GLOBAL_COUNT;
@@ -27,8 +27,7 @@ impl Bucket {
         }
     }
 
-
-    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<SingleThreaded>) {
+    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<MultiThreaded>) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
@@ -54,7 +53,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &DBWithThreadMode<SingleThreaded>) -> Vec<String> {
+    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &DBWithThreadMode<MultiThreaded>) -> Vec<String> {
         let mut results = Vec::new();
         let mut res: u64;
 

@@ -1,4 +1,4 @@
-use rocksdb::{DBWithThreadMode, SingleThreaded};
+use rocksdb::{DBWithThreadMode, MultiThreaded};
 use serde::{Deserialize, Serialize};
 
 use crate::bloom::BloomFilter;
@@ -33,12 +33,12 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<SingleThreaded>) {
+    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<MultiThreaded>) {
         self.get_bucket().add_message(message, trigrams, conn);
         self.size += 1;
     }
 
-    pub fn search(&self, query: &str, conn: &DBWithThreadMode<SingleThreaded>) -> Vec<String> {
+    pub fn search(&self, query: &str, conn: &DBWithThreadMode<MultiThreaded>) -> Vec<String> {
         let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
         return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect();
     }
