@@ -1,7 +1,4 @@
-use std::io::Read;
 use std::sync::atomic::Ordering;
-use flate2::bufread::DeflateEncoder;
-use flate2::read::DeflateDecoder;
 use rocksdb::{DBWithThreadMode, SingleThreaded};
 use crate::bloom::BloomFilter;
 use serde::{Deserialize, Serialize};
@@ -91,19 +88,4 @@ impl Bucket {
 
         messages
     }
-}
-
-fn compress(data: &str) -> Vec<u8> {
-    let data_bytes = data.as_bytes();
-    let mut encoder = DeflateEncoder::new(data_bytes, flate2::Compression::default());
-    let mut compressed_data = Vec::new();
-    encoder.read_to_end(&mut compressed_data).unwrap();
-    compressed_data
-}
-
-fn deflate(data: &[u8]) -> String {
-    let mut decoder = DeflateDecoder::new(data);
-    let mut decompressed_data = Vec::new();
-    decoder.read_to_end(&mut decompressed_data).unwrap();
-    String::from_utf8(decompressed_data).unwrap()
 }

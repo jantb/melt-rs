@@ -38,6 +38,12 @@ impl SearchIndex {
         Ok(())
     }
 
+    pub fn clear(&mut self){
+        self.shards.clear();
+        let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
+        let path = format!("{}/.melt_index{}.dat", buf, self.thread);
+        let _ = DB::destroy(&Options::default(), path);
+    }
 
     pub fn load_from_json(thread: u8) -> Self {
         let buf = dirs::home_dir().unwrap().into_os_string().into_string().unwrap();
