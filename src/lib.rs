@@ -14,8 +14,8 @@ pub mod index;
 mod shard;
 mod trigrams;
 
-pub fn get_search_index(thread :u8) -> index::SearchIndex {
-    index::SearchIndex::load_from_json(thread)
+pub fn get_search_index() -> index::SearchIndex {
+    index::SearchIndex::default()
 }
 
 

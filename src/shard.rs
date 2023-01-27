@@ -1,4 +1,3 @@
-use rocksdb::{DBWithThreadMode, MultiThreaded};
 use serde::{Deserialize, Serialize};
 
 use crate::bloom::BloomFilter;
@@ -8,7 +7,6 @@ use crate::trigrams::trigram;
 #[derive(Serialize, Deserialize)]
 pub struct Shard {
     bucket: Vec<Bucket>,
-    pub size: usize,
     bloom_size: usize,
     bloom_k: u64,
 }
@@ -20,7 +18,6 @@ impl Shard {
     ) -> Self {
         Self {
             bucket: vec![],
-            size: 0,
             bloom_size,
             bloom_k,
         }
@@ -33,14 +30,13 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<MultiThreaded>) {
-        self.get_bucket().add_message(message, trigrams, conn);
-        self.size += 1;
+    pub fn add_message(&mut self, trigrams: &Vec<String>, key:usize)  {
+        self.get_bucket().add_message( trigrams,key)
     }
 
-    pub fn search(&self, query: &str, conn: &DBWithThreadMode<MultiThreaded>) -> Vec<String> {
-        let query_bits = self.get_query_bits(trigram(&*query.to_lowercase()));
-        return self.bucket.iter().map(|b| b.search(query, &query_bits, conn)).flatten().collect();
+    pub fn search(&self, query: &str) -> Vec<usize> {
+        let query_bits = self.get_query_bits(trigram(&*query));
+        return self.bucket.iter().map(|b| b.search(&query_bits)).flatten().collect();
     }
 
     fn get_query_bits(&self, trigrams: Vec<String>) -> Vec<u64> {

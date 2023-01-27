@@ -1,8 +1,5 @@
-use std::sync::atomic::Ordering;
-use rocksdb::{DBWithThreadMode, MultiThreaded};
 use crate::bloom::BloomFilter;
 use serde::{Deserialize, Serialize};
-use crate::index::GLOBAL_COUNT;
 
 #[derive(Serialize, Deserialize)]
 pub struct Bucket {
@@ -27,16 +24,14 @@ impl Bucket {
         }
     }
 
-    pub fn add_message(&mut self, message: &str, trigrams: &Vec<String>, conn: &DBWithThreadMode<MultiThreaded>) {
+    pub fn add_message(&mut self, trigrams: &Vec<String>, key:usize) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
             bloom_filter.add(v)
         });
         self.add_bloom(bloom_filter.get_bitset());
-        let count = GLOBAL_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
-        conn.put(count.to_le_bytes(), message).unwrap();
-        self.messages[(self.bloom_count - 1) as usize] = count;
+        self.messages[(self.bloom_count - 1) as usize] = key;
     }
 
     // add current document to the bloom index
@@ -53,7 +48,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query: &str, query_bits: &Vec<u64>, conn: &DBWithThreadMode<MultiThreaded>) -> Vec<String> {
+    pub fn search(&self, query_bits: &Vec<u64>) -> Vec<usize> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -75,16 +70,6 @@ impl Bucket {
                 }
             }
         }
-        if results.is_empty() { return vec![]; }
-        let vec: Vec<_> = results.iter().map(|i| self.messages[*i as usize]).collect();
-        let mut messages = Vec::new();
-        for x in vec {
-            let result = String::from_utf8(conn.get(x.to_le_bytes()).unwrap().unwrap()).unwrap();
-            if result.contains(&query) {
-                messages.push(result);
-            }
-        }
-
-        messages
+        results.iter().map(|i| self.messages[*i as usize]).collect()
     }
 }
