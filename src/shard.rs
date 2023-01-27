@@ -35,7 +35,7 @@ impl Shard {
     }
 
     pub fn search(&self, query: &str) -> Vec<usize> {
-        let query_bits = self.get_query_bits(trigram(&*query));
+        let query_bits = self.get_query_bits(trigram(query));
         return self.bucket.iter().map(|b| b.search(&query_bits)).flatten().collect();
     }
 

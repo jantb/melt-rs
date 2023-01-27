@@ -3,11 +3,11 @@ use ascii_utils::Check;
 #[test]
 fn test_get_trigram() {
     let trigrams = trigram("Hello, wor杯ld!");
-    assert_eq!(trigrams, vec!["Hel", "ell", "llo", "lo,", "o, ", ", w", " wo", "wor", "or杯", "r杯l","杯ld", "ld!"]);
+    assert_eq!(trigrams, vec!["hel", "ell", "llo", "lo,", "o, ", ", w", " wo", "wor", "or杯", "r杯l","杯ld", "ld!"]);
 }
 
 pub fn trigram(word: &str) -> Vec<String> {
-    let chars: Vec<char> = word
+    let chars: Vec<char> = word.to_lowercase()
         .chars()
         .filter(|&c| c.is_printable() || c.is_ascii())
         .collect::<String>().chars().collect();

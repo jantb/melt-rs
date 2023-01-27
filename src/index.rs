@@ -27,7 +27,7 @@ impl SearchIndex {
 
     pub fn add_message(&mut self, message: &str, key:usize) {
         self.size += 1;
-        let trigrams = trigram(message.to_lowercase().as_str());
+        let trigrams = trigram(message);
         let (m, k) = estimate_parameters(trigrams.len() as u64, 0.6);
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
@@ -44,7 +44,7 @@ impl SearchIndex {
         if query.len() < 3 { return vec![]; }
         let results: Vec<_> = self.shards
             .iter()
-            .flat_map(|shard| shard.search(query.to_lowercase().as_str()))
+            .flat_map(|shard| shard.search(query))
             .collect();
         results
     }
