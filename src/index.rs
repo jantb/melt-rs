@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::{Error, Read};
 use std::sync::atomic::AtomicUsize;
 use bincode::deserialize;
-use rayon::prelude::*;
 use rocksdb::{DB, DBCompressionType, DBWithThreadMode, MultiThreaded, Options};
 use crate::bloom::estimate_parameters;
 
@@ -79,7 +78,7 @@ impl SearchIndex {
     pub fn add_message(&mut self, message: &str) {
         let trigrams = trigram(message);
         let (m, k) = estimate_parameters(trigrams.len() as u64, 0.6);
-        match self.shards.par_iter_mut().find_any(|s| s.get_m() == m && s.get_k() == k) {
+        match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
                 let mut shard = Shard::new(m, k);
                 shard.add_message(message, &trigrams, &self.conn);
@@ -92,18 +91,17 @@ impl SearchIndex {
     pub fn search(&self, query: &str) -> Vec<String> {
         if query.len() < 3 { return vec![]; }
         let query_words: Vec<&str> = query.split(" ").collect();
-        let mut results: Vec<_> = self.shards
-            .par_iter()
+        let results: Vec<_> = self.shards
+            .iter()
             .flat_map(|shard| shard.search(query, &self.conn))
             .filter_map(|result| {
-                if query_words.par_iter().all(|q| result.contains(q)) {
+                if query_words.iter().all(|q| result.contains(q)) {
                     Some(result)
                 } else {
                     None
                 }
             })
             .collect();
-        results.truncate(5000);
         results
     }
 
