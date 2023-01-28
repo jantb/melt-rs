@@ -30,16 +30,16 @@ impl Shard {
         return self.bloom_k;
     }
 
-    pub fn add_message(&mut self, trigrams: &Vec<String>, key:usize)  {
+    pub fn add_message(&mut self, trigrams: &[String], key:usize)  {
         self.get_bucket().add_message( trigrams,key)
     }
 
     pub fn search(&self, query: &str) -> Vec<usize> {
-        let query_bits = self.get_query_bits(trigram(query));
+        let query_bits = self.get_query_bits(trigram(query).as_slice());
         return self.bucket.iter().map(|b| b.search(&query_bits)).flatten().collect();
     }
 
-    fn get_query_bits(&self, trigrams: Vec<String>) -> Vec<u64> {
+    fn get_query_bits(&self, trigrams: &[String]) -> Vec<u64> {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
         trigrams.iter().for_each(|t| bloom_filter.add(t));
         return Self::get_set_bits(bloom_filter.get_bitset());

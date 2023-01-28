@@ -24,7 +24,7 @@ impl Bucket {
         }
     }
 
-    pub fn add_message(&mut self, trigrams: &Vec<String>, key:usize) {
+    pub fn add_message(&mut self, trigrams: &[String], key:usize) {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 64, self.bloom_k);
 
         trigrams.iter().for_each(|v| {
@@ -35,7 +35,7 @@ impl Bucket {
     }
 
     // add current document to the bloom index
-    fn add_bloom(&mut self, vec: &Vec<u64>) {
+    fn add_bloom(&mut self, vec: &[u64]) {
         for i in 0..self.bloom_size * 64 as usize {
             if vec[i / 64] & (1 << (i % 64)) != 0 {
                 self.bloom_filter[i] |= 1u64 << (self.bloom_count);
@@ -48,7 +48,7 @@ impl Bucket {
         self.bloom_count == 64
     }
 
-    pub fn search(&self, query_bits: &Vec<u64>) -> Vec<usize> {
+    pub fn search(&self, query_bits: &[u64]) -> Vec<usize> {
         let mut results = Vec::new();
         let mut res: u64;
 
@@ -70,6 +70,6 @@ impl Bucket {
                 }
             }
         }
-        results.iter().map(|i| self.messages[*i as usize]).collect()
+        results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
     }
 }

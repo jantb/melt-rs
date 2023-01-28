@@ -61,7 +61,7 @@ impl SearchIndex {
     }
 }
 
-fn get_file_as_byte_vec(filename: &String) -> Result<Vec<u8>, Error> {
+fn get_file_as_byte_vec(filename: &str) -> Result<Vec<u8>, Error> {
     let mut f = File::open(&filename)?;
     let metadata = fs::metadata(&filename)?;
     let mut buffer = vec![0; metadata.len() as usize];
