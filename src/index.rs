@@ -2,6 +2,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{Error, Read};
 use std::sync::atomic::AtomicUsize;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::bloom::estimate_parameters;
 
@@ -25,25 +26,26 @@ impl SearchIndex {
         self.shards.clear();
     }
 
-    pub fn add_message(&mut self, message: &str, key:usize) {
-        self.size += 1;
-        let trigrams = trigram(message);
+    pub fn add(&mut self, item: &str) -> usize {
+        let trigrams = trigram(item);
         let (m, k) = estimate_parameters(trigrams.len() as u64, 0.6);
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
                 let mut shard = Shard::new(m, k);
-                let i = shard.add_message(&trigrams, key);
+                let i = shard.add_message(&trigrams, self.size +1);
                 self.shards.push(shard);
                 i
             }
-            Some(shard) => { shard.add_message(&trigrams, key) }
+            Some(shard) => { shard.add_message(&trigrams, self.size +1) }
         };
+        self.size += 1;
+        self.size
     }
 
     pub fn search(&self, query: &str) -> Vec<usize> {
         if query.len() < 3 { return vec![]; }
         let results: Vec<_> = self.shards
-            .iter()
+            .par_iter()
             .flat_map(|shard| shard.search(query))
             .collect();
         results
@@ -69,3 +71,31 @@ fn get_file_as_byte_vec(filename: &String) -> Result<Vec<u8>, Error> {
 }
 
 
+
+#[test]
+fn test_search_non_case_sens() {
+    let mut index = SearchIndex::default();
+
+    let item =  "Hello, wor杯ld!";
+    let i = index.add(item);
+    let string = "hello".to_string();
+    let vec = index.search(string.as_str());
+    let res = vec.first().unwrap();
+    assert_eq!(*res, i as usize);
+
+    let mut index = SearchIndex::default();
+
+    let item =  "Hello, wor杯ld!";
+    let i =   index.add(item);
+    let string = "Hello".to_string();
+    let vec = index.search(string.as_str());
+    let res = vec.first().unwrap();
+    assert_eq!(*res, i as usize);
+
+    let item =  "Hello, wor杯ld!";
+    index.add(item);
+    let string = "He3llo".to_string();
+    let vec = index.search(string.as_str());
+    let res = vec.first().unwrap_or(&(0 as usize));
+    assert_eq!(*res, 0 as usize);
+}
