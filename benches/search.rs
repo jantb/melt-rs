@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for i in 2_000_001..3_000_001 {
         let _ = index.add(format!("World is ending and I dont like it at all, there would be sa time for this and that and where does it evolve around the sun so bright and big{}", i).as_str());
     }
-    c.bench_function("search for hello", |b| b.iter(|| index.search("hello")));
+    c.bench_function("search for hello", |b| b.iter(|| index.search("hello",true)));
 }
 
 criterion_group!(benches, criterion_benchmark);
