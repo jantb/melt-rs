@@ -44,9 +44,10 @@ impl SearchIndex {
 
     pub fn search(&self, query: &str) -> Vec<usize> {
         if query.len() < 3 { return vec![]; }
+        let trigrams = trigram(query);
         let results: Vec<_> = self.shards
             .par_iter()
-            .flat_map(|shard| shard.search(query))
+            .flat_map(|shard| shard.search(&trigrams))
             .collect();
         results
     }
