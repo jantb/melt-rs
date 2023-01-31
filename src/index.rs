@@ -28,7 +28,7 @@ impl SearchIndex {
 
     pub fn add(&mut self, item: &str) -> usize {
         let trigrams = trigram(item);
-        let (m, k) = estimate_parameters(trigrams.len() as u64, 0.6);
+        let (m, k) = estimate_parameters(trigrams.len(), 0.6);
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
                 let mut shard = Shard::new(m, k);
