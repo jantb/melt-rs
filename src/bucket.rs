@@ -48,6 +48,7 @@ impl Bucket {
         self.bloom_count == 128
     }
 
+    #[inline(always)]
     pub fn search(&self, query_bits: &[u128]) -> Vec<usize> {
         let mut results = Vec::new();
         let mut res: u128;
@@ -65,11 +66,11 @@ impl Bucket {
             if res != 0 {
                 for j in 0..128 {
                     if res & (1 << j) > 0 {
-                        results.push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
+                        results.push(((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64) as usize);
                     }
                 }
             }
         }
-        results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
+        results
     }
 }
