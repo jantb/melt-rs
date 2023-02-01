@@ -39,12 +39,14 @@ impl Shard {
         return self.bucket.iter().map(|b| b.search(&query_bits)).flatten().collect();
     }
 
+    #[inline(always)]
     fn get_query_bits(&self, trigrams: &[String]) -> Vec<u128> {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 128, self.bloom_k);
         trigrams.iter().for_each(|t| bloom_filter.add(t));
         return Self::get_set_bits(bloom_filter.get_bitset());
     }
 
+    #[inline(always)]
     fn get_bucket(&mut self) -> &mut Bucket {
         if self.bucket.is_empty() || self.bucket.last().unwrap().is_full() {
             self.bucket.push(Bucket::new(self.bloom_size, self.bloom_k));
@@ -52,6 +54,7 @@ impl Shard {
         self.bucket.last_mut().unwrap()
     }
 
+    #[inline(always)]
     fn get_set_bits(bits: &Vec<u128>) -> Vec<u128> {
         let mut set_bits = Vec::new();
         for (i, &bit) in bits.iter().enumerate() {

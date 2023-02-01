@@ -1,25 +1,26 @@
 use std::fs;
 use std::fs::File;
 use std::io::{Error, Read};
-use std::sync::atomic::AtomicUsize;
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::bloom::estimate_parameters;
 
 use crate::shard::Shard;
 use crate::trigrams::trigram;
 
-pub static GLOBAL_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct SearchIndex {
     shards: Vec<Shard>,
     size: usize,
+    prob: f64
 }
 
 impl SearchIndex {
     pub fn default() -> SearchIndex {
-        SearchIndex { shards: vec![], size: 0 }
+        SearchIndex { shards: vec![], size: 0, prob: 0.6 }
+    }
+    pub fn default_with_prob(prob: f64) -> SearchIndex {
+        SearchIndex { shards: vec![], size: 0, prob }
     }
     pub fn clear(&mut self) {
         self.size = 0;
@@ -28,7 +29,7 @@ impl SearchIndex {
 
     pub fn add(&mut self, item: &str) -> usize {
         let trigrams = trigram(item);
-        let (m, k) = estimate_parameters(trigrams.len(), 0.6);
+        let (m, k) = estimate_parameters(trigrams.len(), self.prob);
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
                 let mut shard = Shard::new(m, k);
@@ -46,7 +47,7 @@ impl SearchIndex {
         if query.len() < 3 { return vec![]; }
         let trigrams = if exact { trigram(query) } else { query.split(" ").flat_map(|q| trigram(q)).collect() };
         let results: Vec<_> = self.shards
-            .par_iter()
+            .iter()
             .flat_map(|shard| shard.search(&trigrams))
             .collect();
         results
@@ -54,6 +55,10 @@ impl SearchIndex {
 
     pub fn get_size(&self) -> usize {
         self.size
+    }
+
+    pub fn get_prob(&self) -> f64 {
+        self.prob
     }
 
     pub fn get_size_bytes(&self) -> usize {
