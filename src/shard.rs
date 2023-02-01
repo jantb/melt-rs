@@ -33,6 +33,7 @@ impl Shard {
         self.get_bucket().add_message( trigrams,key)
     }
 
+    #[inline(always)]
     pub fn search(&self, trigrams: &[String]) -> Vec<usize> {
         let query_bits = self.get_query_bits(trigrams);
         return self.bucket.iter().map(|b| b.search(&query_bits)).flatten().collect();
