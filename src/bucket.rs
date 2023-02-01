@@ -48,7 +48,6 @@ impl Bucket {
         self.bloom_count == 128
     }
 
-    #[inline(always)]
     pub fn search(&self, query_bits: &[u128]) -> Vec<usize> {
         let mut results = Vec::new();
         let mut res: u128;
