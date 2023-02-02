@@ -1,18 +1,18 @@
 use std::fs;
 use std::fs::File;
 use std::io::{Error, Read};
-use serde::{Deserialize, Serialize};
-use crate::bloom::estimate_parameters;
 
+use serde::{Deserialize, Serialize};
+
+use crate::bloom::estimate_parameters;
 use crate::shard::Shard;
 use crate::trigrams::trigram;
-
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct SearchIndex {
     shards: Vec<Shard>,
     size: usize,
-    prob: f64
+    prob: f64,
 }
 
 impl SearchIndex {
@@ -46,6 +46,7 @@ impl SearchIndex {
     pub fn search(&self, query: &str, exact: bool) -> Vec<usize> {
         if query.len() < 3 { return vec![]; }
         let trigrams = if exact { trigram(query) } else { query.split(" ").flat_map(|q| trigram(q)).collect() };
+        if trigrams.is_empty() { return vec![]; }
         let results: Vec<_> = self.shards
             .iter()
             .flat_map(|shard| shard.search(&trigrams))
@@ -93,14 +94,14 @@ fn test_search_non_case_sens() {
     let item = "Hello, wor杯ld!";
     let i = index.add(item);
     let string = "Hello".to_string();
-    let vec = index.search(string.as_str(),true);
+    let vec = index.search(string.as_str(), true);
     let res = vec.first().unwrap();
     assert_eq!(*res, i as usize);
 
     let item = "Hello, wor杯ld!";
     index.add(item);
     let string = "He3llo".to_string();
-    let vec = index.search(string.as_str(),true);
+    let vec = index.search(string.as_str(), true);
     let res = vec.first().unwrap_or(&(0 as usize));
     assert_eq!(*res, 0 as usize);
 }
