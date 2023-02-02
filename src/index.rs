@@ -1,6 +1,7 @@
 use std::fs;
 use std::fs::File;
 use std::io::{Error, Read};
+use rayon::prelude::*;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +49,7 @@ impl SearchIndex {
         let trigrams = if exact { trigram(query) } else { query.split(" ").flat_map(|q| trigram(q)).collect() };
         if trigrams.is_empty() { return vec![]; }
         let results: Vec<_> = self.shards
-            .iter()
+            .par_iter()
             .flat_map(|shard| shard.search(&trigrams))
             .collect();
         results

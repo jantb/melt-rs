@@ -9,6 +9,7 @@ homepage = "https://github.com/jantb/melt-rs.git"
 
 [dependencies]
 serde = { version = "1.0.152", features = ["derive"] }
+rayon = "1.6.1"
 bincode = "1.3.3"
 
 [dev-dependencies]
