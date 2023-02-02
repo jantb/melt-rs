@@ -8,7 +8,6 @@ readme = "README.md"
 homepage = "https://github.com/jantb/melt-rs.git"
 
 [dependencies]
-ascii_utils = "0.9.3"
 serde = { version = "1.0.152", features = ["derive"] }
 bincode = "1.3.3"
 
