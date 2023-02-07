@@ -76,17 +76,17 @@ impl SearchIndex {
     }
 
     pub fn search_or(&self, query: &str) -> Vec<usize> {
-        let trigrams = query
+        let grams = query
             .split(" ")
-            .flat_map(|q| trigram(q))
+            .flat_map(|q| grams(q))
             .collect::<Vec<String>>();
-        if trigrams.is_empty() {
+        if grams.is_empty() {
             return vec![];
         }
         let results: Vec<_> = self
             .shards
             .par_iter()
-            .flat_map(|shard| shard.search_or(&trigrams))
+            .flat_map(|shard| shard.search_or(&grams))
             .collect();
         results
     }
