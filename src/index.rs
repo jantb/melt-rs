@@ -20,10 +20,18 @@ pub struct SearchIndex {
 
 impl SearchIndex {
     pub fn default() -> SearchIndex {
-        SearchIndex { shards: vec![], size: 0, prob: 0.6 }
+        SearchIndex {
+            shards: vec![],
+            size: 0,
+            prob: 0.6,
+        }
     }
     pub fn default_with_prob(prob: f64) -> SearchIndex {
-        SearchIndex { shards: vec![], size: 0, prob }
+        SearchIndex {
+            shards: vec![],
+            size: 0,
+            prob,
+        }
     }
     pub fn clear(&mut self) {
         self.size = 0;
@@ -33,36 +41,53 @@ impl SearchIndex {
     pub fn add(&mut self, item: &str) -> usize {
         let grams = grams(item);
         let (m, k) = estimate_parameters(grams.len(), self.prob);
-        match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
+        match self
+            .shards
+            .iter_mut()
+            .find(|s| s.get_m() == m && s.get_k() == k)
+        {
             None => {
                 let mut shard = Shard::new(m, k);
                 let i = shard.add_message(&grams, self.size + 1);
                 self.shards.push(shard);
                 i
             }
-            Some(shard) => { shard.add_message(&grams, self.size + 1) }
+            Some(shard) => shard.add_message(&grams, self.size + 1),
         };
         self.size += 1;
         self.size
     }
 
     pub fn search(&self, query: &str, exact: bool) -> Vec<usize> {
-        if query.len() < 3 { return vec![]; }
-        let trigrams = if exact { grams(query) } else { query.split(" ").flat_map(|q| grams(q)).collect() };
-        if trigrams.is_empty() { return vec![]; }
-        let results: Vec<_> = self.shards
+        let trigrams = if exact {
+            grams(query)
+        } else {
+            query.split(" ").flat_map(|q| grams(q)).collect()
+        };
+        if trigrams.is_empty() {
+            return vec![];
+        }
+        let results: Vec<_> = self
+            .shards
             .par_iter()
             .flat_map(|shard| shard.search(&trigrams))
             .collect();
         results
     }
 
-
     pub fn search_or(&self, query: &str) -> Vec<usize> {
-        if query.len() < 3 { return vec![]; }
-        let trigrams = query.split(" ").flat_map(|q| trigram(q)).collect::<Vec<String>>();
-        if trigrams.is_empty() { return vec![]; }
-        let results: Vec<_> = self.shards
+        if query.len() < 3 {
+            return vec![];
+        }
+        let trigrams = query
+            .split(" ")
+            .flat_map(|q| trigram(q))
+            .collect::<Vec<String>>();
+        if trigrams.is_empty() {
+            return vec![];
+        }
+        let results: Vec<_> = self
+            .shards
             .par_iter()
             .flat_map(|shard| shard.search_or(&trigrams))
             .collect();
@@ -96,7 +121,12 @@ fn grams(query: &str) -> Vec<String> {
     let query = query.to_lowercase();
     let mut vec = trigram(&query);
     vec.extend(bigram(&query));
-    vec.extend(query.chars().map(|c| c.to_string()).collect::<HashSet<String>>());
+    vec.extend(
+        query
+            .chars()
+            .map(|c| c.to_string())
+            .collect::<HashSet<String>>(),
+    );
     vec
 }
 
@@ -128,7 +158,6 @@ fn test_search_non_case_sens() {
     assert_eq!(*res, 0 as usize);
 }
 
-
 #[test]
 fn test_search_not_exact() {
     let mut index = SearchIndex::default();
@@ -139,7 +168,6 @@ fn test_search_not_exact() {
     let vec = index.search(string.as_str(), true);
     assert_eq!(0, vec.len());
 
-
     let mut index = SearchIndex::default();
 
     let item = "Hello, wor杯ld!";
@@ -148,7 +176,6 @@ fn test_search_not_exact() {
     let vec = index.search(string.as_str(), false);
     assert_eq!(1, vec.len());
 }
-
 
 #[test]
 fn test_search_or() {
