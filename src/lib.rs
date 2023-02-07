@@ -12,6 +12,7 @@ mod bucket;
 pub mod index;
 mod shard;
 mod trigrams;
+mod bigrams;
 
 pub fn get_search_index() -> index::SearchIndex {
     index::SearchIndex::default()

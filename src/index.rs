@@ -1,10 +1,12 @@
+use std::collections::HashSet;
 use std::fs;
 use std::fs::File;
 use std::io::{Error, Read};
-use rayon::prelude::*;
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::bigrams::bigram;
 use crate::bloom::estimate_parameters;
 use crate::shard::Shard;
 use crate::trigrams::trigram;
@@ -29,16 +31,16 @@ impl SearchIndex {
     }
 
     pub fn add(&mut self, item: &str) -> usize {
-        let trigrams = trigram(item);
-        let (m, k) = estimate_parameters(trigrams.len(), self.prob);
+        let grams = grams(item);
+        let (m, k) = estimate_parameters(grams.len(), self.prob);
         match self.shards.iter_mut().find(|s| s.get_m() == m && s.get_k() == k) {
             None => {
                 let mut shard = Shard::new(m, k);
-                let i = shard.add_message(&trigrams, self.size + 1);
+                let i = shard.add_message(&grams, self.size + 1);
                 self.shards.push(shard);
                 i
             }
-            Some(shard) => { shard.add_message(&trigrams, self.size + 1) }
+            Some(shard) => { shard.add_message(&grams, self.size + 1) }
         };
         self.size += 1;
         self.size
@@ -46,7 +48,7 @@ impl SearchIndex {
 
     pub fn search(&self, query: &str, exact: bool) -> Vec<usize> {
         if query.len() < 3 { return vec![]; }
-        let trigrams = if exact { trigram(query) } else { query.split(" ").flat_map(|q| trigram(q)).collect() };
+        let trigrams = if exact { grams(query) } else { query.split(" ").flat_map(|q| grams(q)).collect() };
         if trigrams.is_empty() { return vec![]; }
         let results: Vec<_> = self.shards
             .par_iter()
@@ -55,9 +57,10 @@ impl SearchIndex {
         results
     }
 
+
     pub fn search_or(&self, query: &str) -> Vec<usize> {
         if query.len() < 3 { return vec![]; }
-        let trigrams =  query.split(" ").flat_map(|q| trigram(q)).collect::<Vec<String>>() ;
+        let trigrams = query.split(" ").flat_map(|q| trigram(q)).collect::<Vec<String>>();
         if trigrams.is_empty() { return vec![]; }
         let results: Vec<_> = self.shards
             .par_iter()
@@ -89,6 +92,13 @@ fn get_file_as_byte_vec(filename: &str) -> Result<Vec<u8>, Error> {
     Ok(buffer)
 }
 
+fn grams(query: &str) -> Vec<String> {
+    let query = query.to_lowercase();
+    let mut vec = trigram(&query);
+    vec.extend(bigram(&query));
+    vec.extend(query.chars().map(|c| c.to_string()).collect::<HashSet<String>>());
+    vec
+}
 
 #[test]
 fn test_search_non_case_sens() {
@@ -149,5 +159,4 @@ fn test_search_or() {
     let string = "hello there".to_string();
     let vec = index.search_or(string.as_str());
     assert_eq!(1, vec.len());
-
 }
