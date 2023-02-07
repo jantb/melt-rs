@@ -76,9 +76,6 @@ impl SearchIndex {
     }
 
     pub fn search_or(&self, query: &str) -> Vec<usize> {
-        if query.len() < 3 {
-            return vec![];
-        }
         let trigrams = query
             .split(" ")
             .flat_map(|q| trigram(q))
