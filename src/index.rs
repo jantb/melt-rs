@@ -55,6 +55,17 @@ impl SearchIndex {
         results
     }
 
+    pub fn search_or(&self, query: &str) -> Vec<usize> {
+        if query.len() < 3 { return vec![]; }
+        let trigrams =  query.split(" ").flat_map(|q| trigram(q)).collect::<Vec<String>>() ;
+        if trigrams.is_empty() { return vec![]; }
+        let results: Vec<_> = self.shards
+            .par_iter()
+            .flat_map(|shard| shard.search_or(&trigrams))
+            .collect();
+        results
+    }
+
     pub fn get_size(&self) -> usize {
         self.size
     }
@@ -126,4 +137,17 @@ fn test_search_not_exact() {
     let string = "hello wor".to_string();
     let vec = index.search(string.as_str(), false);
     assert_eq!(1, vec.len());
+}
+
+
+#[test]
+fn test_search_or() {
+    let mut index = SearchIndex::default();
+
+    let item = "Hello, wor杯ld!";
+    let _ = index.add(item);
+    let string = "hello there".to_string();
+    let vec = index.search_or(string.as_str());
+    assert_eq!(1, vec.len());
+
 }

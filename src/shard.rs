@@ -40,6 +40,12 @@ impl Shard {
     }
 
     #[inline(always)]
+    pub fn search_or(&self, trigrams: &[String]) -> Vec<usize> {
+        let query_bits = self.get_query_bits(trigrams);
+        return self.bucket.iter().map(|b| b.search_or(&query_bits)).flatten().collect();
+    }
+
+    #[inline(always)]
     fn get_query_bits(&self, trigrams: &[String]) -> Vec<u128> {
         let mut bloom_filter = BloomFilter::new(self.bloom_size * 128, self.bloom_k);
         trigrams.iter().for_each(|t| bloom_filter.add(t));

@@ -73,4 +73,27 @@ impl Bucket {
         }
         results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
     }
+
+    #[inline(always)]
+    pub fn search_or(&self, query_bits: &[u128]) -> Vec<usize> {
+        let mut results = Vec::new();
+        let mut res: u128;
+
+        for i in (0..self.bloom_filter.len()).step_by(self.bloom_size * 128) {
+            res = self.bloom_filter[query_bits[0] as usize + i];
+
+            for &query_bit in query_bits[1..].iter() {
+                res = res | self.bloom_filter[query_bit as usize + i];
+            }
+
+            if res != 0 {
+                for j in 0..128 {
+                    if res & (1 << j) > 0 {
+                        results.push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
+                    }
+                }
+            }
+        }
+        results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
+    }
 }
