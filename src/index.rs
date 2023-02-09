@@ -60,7 +60,7 @@ impl SearchIndex {
 
     pub fn search(&self, query: &str, exact: bool) -> Vec<usize> {
         if query.is_empty() {
-            return (1..=self.size).collect::<Vec<usize>>();
+            return (1..=self.size + 1).collect::<Vec<usize>>();
         }
         let trigrams = if exact {
             grams(query)
