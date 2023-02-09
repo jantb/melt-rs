@@ -11,7 +11,7 @@ use crate::bloom::estimate_parameters;
 use crate::shard::Shard;
 use crate::trigrams::trigram;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct SearchIndex {
     shards: Vec<Shard>,
     size: usize,

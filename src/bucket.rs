@@ -1,7 +1,7 @@
 use crate::bloom::BloomFilter;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Bucket {
     messages: Vec<usize>,
     bloom_filter: Vec<u128>,
@@ -11,10 +11,7 @@ pub struct Bucket {
 }
 
 impl Bucket {
-    pub fn new(
-        bloom_size: usize,
-        bloom_k: u64,
-    ) -> Self {
+    pub fn new(bloom_size: usize, bloom_k: u64) -> Self {
         Self {
             messages: vec![0; 128],
             bloom_filter: vec![0; bloom_size * 128],
@@ -24,12 +21,10 @@ impl Bucket {
         }
     }
 
-    pub fn add_message(&mut self, trigrams: &[String], key:usize) {
-        let mut bloom_filter = BloomFilter::new(self.bloom_size * 128, self.bloom_k );
+    pub fn add_message(&mut self, trigrams: &[String], key: usize) {
+        let mut bloom_filter = BloomFilter::new(self.bloom_size * 128, self.bloom_k);
 
-        trigrams.iter().for_each(|v| {
-            bloom_filter.add(v)
-        });
+        trigrams.iter().for_each(|v| bloom_filter.add(v));
         self.add_bloom(bloom_filter.get_bitset());
         self.messages[(self.bloom_count - 1) as usize] = key;
     }
@@ -66,12 +61,16 @@ impl Bucket {
             if res != 0 {
                 for j in 0..128 {
                     if res & (1 << j) > 0 {
-                        results.push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
+                        results
+                            .push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
                     }
                 }
             }
         }
-        results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
+        results
+            .iter()
+            .map(|i| self.messages[*i as usize])
+            .collect::<Vec<usize>>()
     }
 
     #[inline(always)]
@@ -89,11 +88,15 @@ impl Bucket {
             if res != 0 {
                 for j in 0..128 {
                     if res & (1 << j) > 0 {
-                        results.push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
+                        results
+                            .push((128 * (i as u64 / (self.bloom_size * 128) as u64)) + j as u64);
                     }
                 }
             }
         }
-        results.iter().map(|i| self.messages[*i as usize]).collect::<Vec<usize>>()
+        results
+            .iter()
+            .map(|i| self.messages[*i as usize])
+            .collect::<Vec<usize>>()
     }
 }

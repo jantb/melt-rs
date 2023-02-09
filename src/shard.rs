@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::bloom::BloomFilter;
 use crate::bucket::Bucket;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Shard {
     bucket: Vec<Bucket>,
     bloom_size: usize,
