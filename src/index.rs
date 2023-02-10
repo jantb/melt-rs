@@ -54,7 +54,7 @@ impl SearchIndex {
             Some(shard) => shard.add_message(&grams, self.size),
         };
         self.size += 1;
-        self.size
+        self.size - 1
     }
 
     pub fn search(&self, query: &str, exact: bool) -> Vec<usize> {
@@ -188,4 +188,44 @@ fn test_search_or() {
     let string = "hello there".to_string();
     let vec = index.search_or(string.as_str());
     assert_eq!(1, vec.len());
+}
+
+#[test]
+fn test_search_just_get_length_of_index() {
+    let mut index = SearchIndex::default();
+
+    let item = "Hello, wor杯ld!";
+    let _ = index.add(item);
+    assert_eq!(1, index.size);
+}
+
+#[test]
+fn test_search_just_get_length_of_index_multiple_objects() {
+    let mut index = SearchIndex::default();
+
+    let item = "Hello, wor杯ld!";
+    let _ = index.add(item);
+    let item = "Hello, wor杯ld!2";
+    let _ = index.add(item);
+    assert_eq!(2, index.size);
+}
+
+#[test]
+fn test_search_just_return_both_elements_when_black_search() {
+    let mut index = SearchIndex::default();
+
+    let item = "Hello, wor杯ld!";
+    let first = index.add(item);
+
+    let vec = index.search("", true);
+    assert_eq!(0, *vec.first().unwrap());
+    assert_eq!(first, *vec.first().unwrap());
+}
+
+#[test]
+fn test_search_with_0_index() {
+    let index = SearchIndex::default();
+    let string = "hello there".to_string();
+    let vec = index.search_or(string.as_str());
+    assert_eq!(0, vec.len());
 }
