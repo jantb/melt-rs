@@ -62,7 +62,7 @@ impl SearchIndex {
             if self.size == 0 {
                 return vec![];
             }
-            return (0..=self.size).collect::<Vec<usize>>();
+            return (0..=self.size - 1).collect::<Vec<usize>>();
         }
         let trigrams = if exact {
             grams(query)
@@ -220,6 +220,13 @@ fn test_search_just_return_both_elements_when_black_search() {
     let vec = index.search("", true);
     assert_eq!(0, *vec.first().unwrap());
     assert_eq!(first, *vec.first().unwrap());
+
+    let item2 = "Hello, wor杯ld!";
+    let second = index.add(item2);
+
+    let vec = index.search("", true);
+    assert_eq!(1, *vec.last().unwrap());
+    assert_eq!(second, *vec.last().unwrap());
 }
 
 #[test]
